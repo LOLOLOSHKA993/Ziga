@@ -1,43 +1,64 @@
--- Получаем необходимые объекты
+-- Основной скрипт
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local gui = player:WaitForChild("PlayerGui")
-
--- Создаем кнопку в GUI
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(0, 200, 0, 50)
-button.Position = UDim2.new(0.5, -100, 0.8, 0)
-button.Text = "Поднять правую руку"
-button.Parent = gui
-
--- Получаем части тела персонажа (плечо и рука)
+local backpack = player.Backpack
 local rightShoulder = character:WaitForChild("RightShoulder")
-local rightArm = character:WaitForChild("RightArm")
 
--- Переменная для отслеживания состояния руки
+-- Переменные
 local isArmRaised = false
+local heldTool = nil
 
--- Функция для поворота руки
-local function rotateRightArm()
-    if rightShoulder and rightArm then
-        local currentCFrame = rightShoulder.C0  -- Текущее положение плеча
+-- Функция для изменения положения правой руки
+local function rotateRightArm(raise)
+    if rightShoulder then
+        local currentCFrame = rightShoulder.C0  -- Текущее положение соединения плеча
 
-        if isArmRaised then
-            -- Если рука поднята, сбрасываем её в исходное положение
-            local resetCFrame = CFrame.new(0, 0, 0)  -- Исходное положение
-            rightShoulder.C0 = currentCFrame * resetCFrame
-            button.Text = "Поднять правую руку"  -- Меняем текст кнопки
-        else
-            -- Если рука не поднята, поднимем её на 45 градусов
+        if raise then
+            -- Поднять руку на 45 градусов
             local rotationCFrame = CFrame.Angles(0, math.rad(45), 0)  -- Поворот на 45 градусов по оси Y
             rightShoulder.C0 = currentCFrame * rotationCFrame
-            button.Text = "Опустить правую руку"  -- Меняем текст кнопки
+        else
+            -- Вернуть руку в исходное положение
+            local resetCFrame = CFrame.new(0, 0, 0)  -- Возвращаем в исходное положение
+            rightShoulder.C0 = currentCFrame * resetCFrame
         end
-
-        -- Переключаем состояние руки
-        isArmRaised = not isArmRaised
     end
 end
 
--- Привязываем обработчик к кнопке
-button.MouseButton1Click:Connect(rotateRightArm)
+-- Обработчик для использования предмета
+local function onToolEquipped(tool)
+    heldTool = tool
+    -- При взятии предмета в руку поднимаем правую руку
+    rotateRightArm(true)
+end
+
+-- Обработчик для удаления предмета
+local function onToolUnequipped(tool)
+    if tool == heldTool then
+        -- При убирании предмета опускаем правую руку
+        rotateRightArm(false)
+        heldTool = nil
+    end
+end
+
+-- Добавление предмета в инвентарь
+local function giveItemToPlayer()
+    local tool = Instance.new("Tool")  -- Создаем новый инструмент
+    tool.Name = "SampleTool"  -- Название предмета
+    tool.RequiresHandle = true  -- Требует ручку
+    tool.Parent = backpack  -- Добавляем в инвентарь игрока
+
+    -- Создаем ручку для инструмента
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(1, 5, 1)
+    handle.Position = character:WaitForChild("RightHand").Position
+    handle.Parent = tool
+
+    -- Привязка событий при экипировке и снятии предмета
+    tool.Equipped:Connect(onToolEquipped)
+    tool.Unequipped:Connect(onToolUnequipped)
+end
+
+-- Даем предмет игроку при старте игры
+giveItemToPlayer()
