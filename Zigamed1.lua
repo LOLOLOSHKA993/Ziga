@@ -1,21 +1,43 @@
--- Получаем игрока и его персонажа
+-- Получаем необходимые объекты
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
+local gui = player:WaitForChild("PlayerGui")
 
--- Ждем загрузки персонажа
-local humanoid = character:WaitForChild("Humanoid")
+-- Создаем кнопку
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 200, 0, 50)
+button.Position = UDim2.new(0.5, -100, 0.8, 0)
+button.Text = "Поднять правую руку"
+button.Parent = gui
+
+-- Получаем части правой руки и плеча
+local rightShoulder = character:WaitForChild("RightShoulder")
 local rightArm = character:WaitForChild("RightArm")
 
--- Функция для поднятия правой руки на 45 градусов
-local function moveRightArm()
-    -- Устанавливаем правильное положение правой руки с учетом 45 градусов
-    rightArm.CFrame = rightArm.CFrame * CFrame.Angles(math.rad(45), 0, 0)
+-- Переменная для отслеживания состояния руки
+local isArmRaised = false
+
+-- Функция для поворота руки
+local function rotateRightArm()
+    if rightShoulder and rightArm then
+        local currentCFrame = rightShoulder.C0  -- Текущее положение плеча
+
+        if isArmRaised then
+            -- Если рука уже поднята, сбрасываем её в исходное положение
+            local resetCFrame = CFrame.new(0, 0, 0)  -- Исходное положение
+            rightShoulder.C0 = currentCFrame * resetCFrame
+            button.Text = "Поднять правую руку"  -- Меняем текст на кнопке
+        else
+            -- Если рука не поднята, поднимем её на 45 градусов
+            local rotationCFrame = CFrame.Angles(0, math.rad(45), 0)  -- Поворот на 45 градусов
+            rightShoulder.C0 = currentCFrame * rotationCFrame
+            button.Text = "Опустить правую руку"  -- Меняем текст на кнопке
+        end
+
+        -- Переключаем состояние руки
+        isArmRaised = not isArmRaised
+    end
 end
 
--- Подключаемся к Heartbeat, чтобы каждую секунду обновлять положение руки
-game:GetService("RunService").Heartbeat:Connect(function()
-    moveRightArm()
-end)
-
--- Убедимся, что персонаж может двигаться
-humanoid.WalkSpeed = 16  -- Стандартная скорость ходьбы
+-- Обработчик нажатия на кнопку
+button.MouseButton1Click:Connect(rotateRightArm)
